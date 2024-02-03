@@ -5,6 +5,8 @@ Created on Fri Feb  2 14:11:10 2024
 @author: samue
 """
 
+''' Mi comañero y yo no entendimos si al final debía haber o no interacción con las paredes así
+que agregamos el código para que interactúen con ella pero los marcamos con un # '''
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,7 +47,13 @@ class Particle:
         # Fisica 
         self.K = 20.     
         
+        self.sigma = 1.5*self.radius
+        
+        self.epsilon = 1500
+        
         self.VEk = np.zeros(len(t))
+        self.Ep = 0.
+        self.VEp = np.zeros(len(t))
         
     def Evolution(self,i):
         
@@ -64,24 +72,18 @@ class Particle:
         self.r += self.dt*self.v
         
         
-    def CalculateForce(self,p): 
+    def CalculateForce(self,p):
         
         d = np.linalg.norm(self.r - p.r)
         
-        compresion = self.radius + p.radius - d
+        Fn = 4*self.epsilon*( 12*self.sigma**12/d**13 - 6*self.sigma**6/d**7  )
         
-        if compresion >= 0:
-            
-            Fn = self.K * compresion**3
-            
-            self.n = (self.r - p.r)/d
-            
-            
-            self.f = Fn*self.n
-            
-    def ResetForce(self):
-        self.f[:] = 0.
-        self.a[:] = 0.
+        self.n = (self.r - p.r)/d     
+        
+        self.f = np.add(self.f,Fn*self.n)
+        
+        # Falta implementar energía potencial 
+        self.Ep += 4*self.epsilon*( self.sigma**12/d**12 - self.sigma**6/d**6  )
         
     def CalculatePotentialEnergy(self, p2):
         d = np.linalg.norm(self.r - p2.r)
@@ -90,7 +92,13 @@ class Particle:
             U = 0.5 * self.K * compression**2
             return U  
         else:
-            return 0  
+            return 0 
+            
+    def ResetForce(self):
+        self.f[:] = 0.
+        self.a[:] = 0.
+        self.Ep = 0.
+        
         
     # Setter
     def SetPosition(self,i):
@@ -114,13 +122,16 @@ class Particle:
     def GetKineticEnergy(self,scale=1):
         return self.VEk[::scale] 
     
-    def WallInteraction(self, box_size):
+    def GetPotentialEnergy(self,scale=1):
+        return self.VEp[::scale] 
+    
+    #def WallInteraction(self, box_size):
         
-        self.r = np.clip(self.r, -box_size / 2. + self.radius, box_size / 2. - self.radius)
+        #self.r = np.clip(self.r, -box_size / 2. + self.radius, box_size / 2. - self.radius)
     
         # Velocidades inversas
-        self.v = np.where(self.r - self.radius <= -box_size / 2., abs(self.v), self.v)
-        self.v = np.where(self.r + self.radius >= box_size / 2., -abs(self.v), self.v)
+        #self.v = np.where(self.r - self.radius <= -box_size / 2., abs(self.v), self.v)
+        #self.v = np.where(self.r + self.radius >= box_size / 2., -abs(self.v), self.v)
                 
     def CalculateAngularMomentumZ(self):
        
@@ -153,11 +164,8 @@ def GetParticles(N,t):
     
     return Particles 
 
-
 dt = 0.001
-
-dt = 0.001
-tmax = 10.0
+tmax = 10
 t = np.arange(0,tmax,dt)
 Particles = GetParticles(10,t)
 
@@ -178,7 +186,7 @@ def RunSimulation(t, Particles, box_size=40.):
                 if i != j: 
                     total_potential_energy[it] += Particles[i].CalculatePotentialEnergy(Particles[j])
 
-            Particles[i].WallInteraction(box_size)  
+            #Particles[i].WallInteraction(box_size)  
             Particles[i].Evolution(it)
             Particles[i].ResetForce()
             
@@ -224,7 +232,7 @@ def Update(i):
         vx = p.GetVelocity(scale)[i,0]
         vy = p.GetVelocity(scale)[i,1]
         
-        circle = plt.Circle( (x,y), p.radius, color='r', fill=False )
+        circle = plt.Circle( (x,y), p.radius, color='r', fill=True )
         ax.add_patch(circle)
         
         ax.arrow(x,y,vx,vy,color='k',head_width=0.5,length_includes_head=True)
@@ -241,18 +249,28 @@ writer_ = Writer(fps=10, metadata=dict(artist='Me'))
 #Animation.save('EsferaDura.mp4', writer=writer_)
 
 MomentumT = Particles[0].GetMomentum(scale)
+EnergyT = Particles[0].GetKineticEnergy(scale)
+EnergyP = Particles[0].GetPotentialEnergy(scale)
+EnergyP *= 0.5
 
 for i in range(1,len(Particles)):
     MomentumT = np.add(MomentumT,Particles[i].GetMomentum(scale))
+    EnergyT = np.add(EnergyT,Particles[i].GetKineticEnergy(scale))
+    EnergyP = np.add(EnergyP,Particles[i].GetPotentialEnergy(scale))
     
 fig3 = plt.figure(figsize=(10,5))
 ax3 = fig3.add_subplot(221)
+ax4 = fig3.add_subplot(222)
 ax3.plot(t1,MomentumT[:,0],label='px')
 ax3.plot(t1,MomentumT[:,1],label='py')
+ax4.plot(t1,EnergyT,label='Kinetic')
+ax4.plot(t1,EnergyP,label='Potential')
+ax4.plot(t1,EnergyT+0.5*EnergyP,label='Potential')
 ax3.legend()
+ax4.legend()
 
 # a) y b)
-fig4 = plt.figure(figsize=(10, 5))
+fig4 = plt.figure(figsize=(10, 10)) #This is not being plotted
 ax4 = fig4.add_subplot(111)  
 ax4.plot(t, total_px, label='Total px')
 ax4.plot(t, total_py, label='Total py')
@@ -262,7 +280,7 @@ ax4.legend()
 plt.show()
 
 # d) Energía cinética
-fig_kinetic = plt.figure(figsize=(10, 5))
+fig_kinetic = plt.figure(figsize=(10, 10))
 ax_kinetic = fig_kinetic.add_subplot(111)
 ax_kinetic.plot(t, np.sum([p.GetKineticEnergy() for p in Particles], axis=0))
 ax_kinetic.set_xlabel('Time')
@@ -275,16 +293,16 @@ for i in range(len(Particles)):
     for j in range(i+1, len(Particles)):
         for it in range(len(t)):
             total_potential_energy[it] += Particles[i].CalculatePotentialEnergy(Particles[j])
-fig_potential = plt.figure(figsize=(10, 5))
+fig_potential = plt.figure(figsize=(10, 10)) #This is not being plotted
 ax_potential = fig_potential.add_subplot(111)
 ax_potential.plot(t, total_potential_energy)
 ax_potential.set_xlabel('Time')
 ax_potential.set_ylabel('Total Potential Energy')
 plt.show()
 
-# f) Energía potencial
+# f) Energía mecánica
 total_kinetic_energy = np.sum([p.GetKineticEnergy() for p in Particles], axis=0)
-fig_mechanical = plt.figure(figsize=(10, 5))
+fig_mechanical = plt.figure(figsize=(10, 10))
 ax_mechanical = fig_mechanical.add_subplot(111)
 ax_mechanical.plot(t, total_kinetic_energy + total_potential_energy)
 ax_mechanical.set_xlabel('Time')
@@ -296,7 +314,7 @@ angular_momentum_z = np.zeros(len(t))
 for i in range(len(t)):
     angular_momentum_z[i] = sum([p.CalculateAngularMomentumZ() for p in Particles])
 
-fig_angular = plt.figure(figsize=(10, 5))
+fig_angular = plt.figure(figsize=(10, 10)) #This is not being plotted
 ax_angular = fig_angular.add_subplot(111)
 ax_angular.plot(t, angular_momentum_z)
 ax_angular.set_xlabel('Time')
