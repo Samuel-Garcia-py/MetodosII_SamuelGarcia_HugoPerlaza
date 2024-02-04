@@ -4,13 +4,14 @@
 # In[1]:
 
 
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as anim
 from tqdm import tqdm 
 
 
-# In[2]:
+# In[16]:
 
 
 class Planeta:
@@ -86,7 +87,7 @@ class Planeta:
         return timeup
 
 
-# In[67]:
+# In[17]:
 
 
 def GetPlanetas(t):
@@ -100,7 +101,7 @@ def GetPlanetas(t):
     return [Mercurio,Venus,Tierra,Marte,Jupiter]
 
 
-# In[57]:
+# In[18]:
 
 
 dt = 0.001
@@ -109,7 +110,7 @@ t = np.arange(0.,tmax,dt)
 Planetas = GetPlanetas(t)
 
 
-# In[58]:
+# In[19]:
 
 
 def RunSimulation(t,Planetas):
@@ -125,26 +126,26 @@ def RunSimulation(t,Planetas):
     return Planetas
 
 
-# In[59]:
+# In[20]:
 
 
 Planetas = RunSimulation(t,Planetas)
 
 
-# In[72]:
+# In[21]:
 
 
 Planetas[1].GetPerihelio()
 
 
-# In[61]:
+# In[22]:
 
 
 scale = 20
 t1 = t[::scale]
 
 
-# In[69]:
+# In[23]:
 
 
 #plt.plot(Planetas[0].GetPosition()[:,0],Planetas[0].GetPosition()[:,1])
@@ -173,13 +174,13 @@ for planeta in Planetas:
 
 
 
-# In[70]:
+# In[24]:
 
 
 print(periodos_orbitales)
 
 
-# In[63]:
+# In[25]:
 
 
 # Crear listas para almacenar los semi-ejes mayores y los periodos orbitales
@@ -211,7 +212,7 @@ plt.grid(True)
 plt.show()
 
 
-# In[64]:
+# In[26]:
 
 
 # Convertir las listas de datos a numpy arrays para realizar la regresión lineal
@@ -238,26 +239,37 @@ print(f"Pendiente (m): {m}")
 print(f"Punto de corte (c): {c}")
 
 
-# In[75]:
+# In[31]:
 
 
-# Masa del planeta Tierra en el sistema internacional SI (kg)
-masa_planeta = 5.972e24  # kg (masa de la Tierra)
-G_gauss = 4 * np.pi**2
+# Definir la constante gravitacional en el SI
+G_SI = 6.674 * 10**-11  # m^3 kg^-1 s^-2
 
-# Calcular la masa del Sol en unidades gaussianas usando la pendiente de la regresión lineal
-M_sol_gauss = (4 * np.pi**2) / (G_gauss * m) - masa_planeta
+segundos_por_año = 365.25 * 24 * 3600
+pendiente = m * segundos_por_año**2
 
-# Imprimir la masa del Sol en unidades gaussianas
-print(f"Masa del Sol en unidades gaussianas: {M_sol_gauss} unidades gaussianas")
+# Conversión de AU al cubo a metro cúbico
+# 1 AU = 149597870.7 km, 1 km = 1000 metros
+metros_por_AU = 149597870.7 * 1000
+volumen_metro_cubico = (metros_por_AU)**3
 
-M_sol_SI = M_sol_gauss * masa_planeta  # Convertir a kg
+pendiente_s2_m3 = pendiente / volumen_metro_cubico
 
-# Imprimir la masa del Sol en el sistema internacional SI
-print(f"Masa del Sol en el sistema internacional SI: {M_sol_SI} kg")
+# Imprimir el resultado de la conversión
+print("Pendiente en segundos cuadrado por metro cúbico:", pendiente_s2_m3, "s^2/m^3")
+
+# Resolver para la masa del Sol en el SI
+masa_sol_SI = (4*np.pi**2) / (G_SI * pendiente_s2_m3)
+
+# Convertir la masa del Sol al SI a unidades gaussianas
+masa_sol_gaussian = masa_sol_SI * 10**3  # Convertir de kg a g
+
+# Imprimir los resultados
+print("Masa del Sol en el SI:", masa_sol_SI, "kg")
+print("Masa del Sol en unidades gaussianas:", masa_sol_gaussian, "g")
 
 
-# In[73]:
+# In[14]:
 
 
 fig = plt.figure(figsize=(8,5))
