@@ -2,7 +2,7 @@
 """
 Created on Tue Mar 12 21:37:40 2024
 
-@author: samue
+@author: Samuel García & Hugo Perlaza
 """
 
 import numpy as np
